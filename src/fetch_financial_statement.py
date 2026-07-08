@@ -12,13 +12,7 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parent.parent
 ENV_PATH = BASE_DIR / ".env"
 COMPANY_LIST_PATH = BASE_DIR / "data" / "processed" / "company_list.csv"
-SAVE_PATH = BASE_DIR / "data" / "raw" / "samsung_2023_financial_statement.json"
-ASSETS_CSV_PATH = BASE_DIR / "data" / "processed" / "samsung_assets.csv"
 FINANCIAL_STATEMENT_URL = "https://opendart.fss.or.kr/api/fnlttSinglAcntAll.json"
-TARGET_COMPANY_NAME = "삼성전자"
-BUSINESS_YEAR = "2023"
-REPORT_CODE = "11011"
-FINANCIAL_STATEMENT_DIVISION = "CFS"
 ASSET_TOTAL_ACCOUNT_NAME = "자산총계"
 ASSET_TOTAL_FIELDS = [
     "bsns_year",
@@ -29,6 +23,16 @@ ASSET_TOTAL_FIELDS = [
     "frmtrm_amount",
     "bfefrmtrm_amount",
 ]
+REPORT_CODE_NAMES = {
+    "11011": "annual",
+    "11012": "half-year",
+    "11013": "Q1",
+    "11014": "Q3",
+}
+FS_DIV_NAMES = {
+    "CFS": "consolidated",
+    "OFS": "separate",
+}
 
 
 def load_api_key():
@@ -49,17 +53,29 @@ def find_corp_code(company_list_path, company_name):
     return None
 
 
-def build_request_url(api_key, corp_code):
+def build_request_url(api_key, corp_code, bsns_year, report_code, fs_div):
     """Build the DART financial statement API URL."""
     query_params = {
         "crtfc_key": api_key,
         "corp_code": corp_code,
-        "bsns_year": BUSINESS_YEAR,
-        "reprt_code": REPORT_CODE,
-        "fs_div": FINANCIAL_STATEMENT_DIVISION,
+        "bsns_year": bsns_year,
+        "reprt_code": report_code,
+        "fs_div": fs_div,
     }
     query_string = urlencode(query_params)
     return f"{FINANCIAL_STATEMENT_URL}?{query_string}"
+
+
+def build_raw_json_path(company_name, bsns_year):
+    """Build the path for the raw financial statement JSON file."""
+    file_name = f"{company_name}_{bsns_year}_financial_statement.json"
+    return BASE_DIR / "data" / "raw" / file_name
+
+
+def build_assets_csv_path(company_name):
+    """Build the path for the processed asset total CSV file."""
+    file_name = f"{company_name}_assets.csv"
+    return BASE_DIR / "data" / "processed" / file_name
 
 
 def download_json(request_url, save_path):
@@ -160,7 +176,7 @@ def save_asset_rows(asset_rows, csv_path):
 
 
 def print_saved_asset_rows(asset_rows):
-    """Print rows saved to samsung_assets.csv."""
+    """Print rows saved to the processed assets CSV."""
     print("Saved rows:")
 
     for row in asset_rows:
@@ -173,7 +189,8 @@ def print_saved_asset_rows(asset_rows):
         )
 
 
-def main():
+def fetch_financial_statement(company_name, bsns_year, report_code, fs_div):
+    """Fetch, inspect, and process one company's financial statement."""
     api_key = load_api_key()
 
     if not api_key:
@@ -182,21 +199,24 @@ def main():
 
     try:
         print(f"Reading company list from {COMPANY_LIST_PATH}...")
-        corp_code = find_corp_code(COMPANY_LIST_PATH, TARGET_COMPANY_NAME)
+        corp_code = find_corp_code(COMPANY_LIST_PATH, company_name)
 
         if not corp_code:
-            print(f'Failure: Could not find corp_name "{TARGET_COMPANY_NAME}" in company_list.csv.')
+            print(f'Failure: Could not find corp_name "{company_name}" in company_list.csv.')
             return
 
-        print(f"Success: Found {TARGET_COMPANY_NAME} corp_code: {corp_code}")
+        print(f"Success: Found {company_name} corp_code: {corp_code}")
 
-        print(f"Downloading {TARGET_COMPANY_NAME} 2023 consolidated financial statement JSON...")
-        request_url = build_request_url(api_key, corp_code)
-        download_json(request_url, SAVE_PATH)
-        print(f"Success: Saved raw JSON response to {SAVE_PATH}")
+        report_name = REPORT_CODE_NAMES.get(report_code, report_code)
+        fs_div_name = FS_DIV_NAMES.get(fs_div, fs_div)
+        print(f"Downloading {company_name} {bsns_year} {fs_div_name} {report_name} financial statement JSON...")
+        request_url = build_request_url(api_key, corp_code, bsns_year, report_code, fs_div)
+        raw_json_path = build_raw_json_path(company_name, bsns_year)
+        download_json(request_url, raw_json_path)
+        print(f"Success: Saved raw JSON response to {raw_json_path}")
 
         print("Inspecting saved JSON response for asset total data...")
-        response_data = load_json_file(SAVE_PATH)
+        response_data = load_json_file(raw_json_path)
         asset_total_rows = find_asset_total_rows(response_data)
         print_asset_total_rows(asset_total_rows)
 
@@ -207,9 +227,10 @@ def main():
             print('Failure: Could not find an account_nm exactly matching "자산총계".')
             return
 
-        asset_rows = build_asset_rows(asset_total_row, TARGET_COMPANY_NAME, corp_code)
-        save_asset_rows(asset_rows, ASSETS_CSV_PATH)
-        print(f"Success: Saved Samsung asset totals to {ASSETS_CSV_PATH}")
+        asset_rows = build_asset_rows(asset_total_row, company_name, corp_code)
+        assets_csv_path = build_assets_csv_path(company_name)
+        save_asset_rows(asset_rows, assets_csv_path)
+        print(f"Success: Saved asset totals to {assets_csv_path}")
         print_saved_asset_rows(asset_rows)
     except FileNotFoundError:
         print(f"Failure: Company list CSV was not found: {COMPANY_LIST_PATH}")
@@ -225,6 +246,28 @@ def main():
         print(f"Failure: Could not connect to DART API: {error.reason}")
     except OSError as error:
         print(f"Failure: Could not read or write a file: {error}")
+
+
+def main():
+    print("Enter financial statement request settings.")
+    print("report_code: 11011=annual, 11012=half-year, 11013=Q1, 11014=Q3")
+    print("fs_div: CFS=consolidated, OFS=separate")
+
+    company_name = input("company_name: ").strip()
+    bsns_year = input("bsns_year: ").strip()
+    report_code = input("report_code: ").strip()
+    fs_div = input("fs_div: ").strip()
+
+    if not company_name or not bsns_year or not report_code or not fs_div:
+        print("Failure: company_name, bsns_year, report_code, and fs_div are all required.")
+        return
+
+    fetch_financial_statement(
+        company_name=company_name,
+        bsns_year=bsns_year,
+        report_code=report_code,
+        fs_div=fs_div,
+    )
 
 
 if __name__ == "__main__":
