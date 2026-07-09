@@ -99,6 +99,27 @@ def build_master_row(company, overview_data):
     }
 
 
+def read_company_master(csv_path):
+    """Read existing company master rows if the CSV exists."""
+    if not csv_path.exists():
+        return []
+
+    with csv_path.open("r", newline="", encoding="utf-8") as csv_file:
+        reader = csv.DictReader(csv_file)
+        return list(reader)
+
+
+def remove_duplicate_companies(rows):
+    """Remove duplicate company master rows by corp_code."""
+    rows_by_corp_code = {}
+
+    for row in rows:
+        corp_code = row.get("corp_code", "")
+        rows_by_corp_code[corp_code] = row
+
+    return list(rows_by_corp_code.values())
+
+
 def save_company_master(rows, csv_path):
     """Save enriched company master rows to a CSV file."""
     csv_path.parent.mkdir(parents=True, exist_ok=True)
@@ -107,6 +128,46 @@ def save_company_master(rows, csv_path):
         writer = csv.DictWriter(csv_file, fieldnames=OUTPUT_COLUMNS)
         writer.writeheader()
         writer.writerows(rows)
+
+
+def append_or_update_company_master(row, csv_path):
+    """Append one company master row, or update it if corp_code already exists."""
+    existing_rows = read_company_master(csv_path)
+    combined_rows = existing_rows + [row]
+    unique_rows = remove_duplicate_companies(combined_rows)
+    save_company_master(unique_rows, csv_path)
+
+
+def enrich_single_company(corp_code, corp_name, stock_code):
+    """Fetch and save company overview data for one company."""
+    api_key = load_api_key()
+
+    if not api_key:
+        print("Failure: DART_API_KEY was not found in the project root .env file.")
+        return None
+
+    try:
+        print(f"Fetching company overview: {corp_name}")
+        overview_data = fetch_company_overview(api_key, corp_code)
+        company = {
+            "corp_code": corp_code,
+            "corp_name": corp_name,
+            "stock_code": stock_code,
+        }
+        master_row = build_master_row(company, overview_data)
+        append_or_update_company_master(master_row, COMPANY_MASTER_PATH)
+        print(f"Success: Saved company overview to {COMPANY_MASTER_PATH}")
+        return master_row
+    except json.JSONDecodeError as error:
+        print(f"Failure: Could not read DART JSON response: {error}")
+    except HTTPError as error:
+        print(f"Failure: DART API returned an HTTP error: {error.code}")
+    except URLError as error:
+        print(f"Failure: Could not connect to DART API: {error.reason}")
+    except OSError as error:
+        print(f"Failure: Could not read or write a file: {error}")
+
+    return None
 
 
 def enrich_companies(api_key, companies):

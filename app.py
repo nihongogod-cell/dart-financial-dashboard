@@ -1,15 +1,19 @@
 from pathlib import Path
+from datetime import datetime
 
 import pandas as pd
 import streamlit as st
 
+from src.extract_accounts import extract_accounts
+from src.fetch_financial_statement import fetch_multiple_years
+
 
 BASE_DIR = Path(__file__).resolve().parent
-COMPANY_LIST_CSV_PATH = BASE_DIR / "data" / "processed" / "company_list.csv"
-COMPANY_MASTER_CSV_PATH = BASE_DIR / "data" / "processed" / "company_master_sample.csv"
+COMPANY_MASTER_CSV_PATH = BASE_DIR / "data" / "processed" / "company_master.csv"
 FINANCIAL_STATEMENT_CSV_PATH = BASE_DIR / "data" / "processed" / "financial_statement.csv"
 FIXED_REPORT_CODE = "11011"
 FIXED_FS_DIV = "CFS"
+YEAR_COUNT = 5
 COMPANY_COLUMNS = [
     "corp_code",
     "corp_name",
@@ -32,16 +36,8 @@ FINANCIAL_STATEMENT_COLUMNS = [
 ]
 
 
-def choose_company_csv_path():
-    """Use the enriched company master file if it exists."""
-    if COMPANY_MASTER_CSV_PATH.exists():
-        return COMPANY_MASTER_CSV_PATH
-
-    return COMPANY_LIST_CSV_PATH
-
-
-def load_company_data(csv_path):
-    """Load company data from a CSV file."""
+def load_company_master_data(csv_path):
+    """Load the full company master data from a CSV file."""
     company_data = pd.read_csv(csv_path, dtype=str, keep_default_na=False)
 
     for column in COMPANY_COLUMNS:
@@ -53,6 +49,9 @@ def load_company_data(csv_path):
 
 def load_financial_statement_data(csv_path):
     """Load generic financial statement data from a CSV file."""
+    if not csv_path.exists():
+        return pd.DataFrame(columns=FINANCIAL_STATEMENT_COLUMNS)
+
     return pd.read_csv(
         csv_path,
         dtype={
@@ -154,6 +153,55 @@ def prepare_chart_data(account_data):
     return chart_data.set_index("year")
 
 
+def get_latest_completed_years(year_count):
+    """Return the latest completed business years."""
+    latest_completed_year = datetime.now().year - 1
+    years = []
+
+    for offset in range(year_count):
+        years.append(str(latest_completed_year - offset))
+
+    return years
+
+
+def fetch_and_extract_financial_data(selected_company):
+    """Fetch DART data and update financial_statement.csv."""
+    corp_name = selected_company["corp_name"]
+    years = get_latest_completed_years(YEAR_COUNT)
+
+    st.info("최근 5개 사업연도 재무데이터를 가져오는 중입니다...")
+    fetch_results = fetch_multiple_years(
+        company_name=corp_name,
+        years=years,
+        report_code=FIXED_REPORT_CODE,
+        fs_div=FIXED_FS_DIV,
+    )
+
+    if not fetch_results:
+        st.error("재무데이터를 가져오지 못했습니다.")
+        return False
+
+    total_extracted_rows = 0
+
+    for result in fetch_results:
+        extracted_rows = extract_accounts(
+            json_path=result["raw_json_path"],
+            corp_name=result["corp_name"],
+            corp_code=result["corp_code"],
+            report_code=FIXED_REPORT_CODE,
+            fs_div=FIXED_FS_DIV,
+            current_period_only=True,
+        )
+        total_extracted_rows += len(extracted_rows)
+
+    if total_extracted_rows == 0:
+        st.error("재무데이터에서 표시할 계정을 추출하지 못했습니다.")
+        return False
+
+    st.success(f"재무데이터를 가져와서 저장했습니다. 성공한 연도: {len(fetch_results)}개")
+    return True
+
+
 def show_financial_statement_chart(financial_statement_data, selected_company):
     """Show account selector, table, and chart for the selected company."""
     st.header("재무데이터")
@@ -166,7 +214,7 @@ def show_financial_statement_chart(financial_statement_data, selected_company):
     company_data = filter_financial_statement_data(financial_statement_data, corp_code)
 
     if company_data.empty:
-        st.info("아직 수집된 재무데이터가 없습니다.")
+        st.info("아직 수집된 재무데이터가 없습니다. 재무데이터 가져오기를 눌러주세요.")
         return
 
     account_names = sorted(company_data["account_nm"].dropna().unique())
@@ -189,18 +237,19 @@ def show_financial_statement_chart(financial_statement_data, selected_company):
 def main():
     st.title("DART 재무데이터 대시보드")
 
-    company_csv_path = choose_company_csv_path()
-
-    if not company_csv_path.exists():
-        st.error(f"CSV file was not found: {company_csv_path}")
+    if not COMPANY_MASTER_CSV_PATH.exists():
+        st.error(
+            "company_master.csv 파일이 없습니다. 먼저 src/build_company_master.py를 실행해서 "
+            "data/processed/company_master.csv를 생성해 주세요."
+        )
         return
 
-    if not FINANCIAL_STATEMENT_CSV_PATH.exists():
-        st.error(f"CSV file was not found: {FINANCIAL_STATEMENT_CSV_PATH}")
-        return
+    company_data = load_company_master_data(COMPANY_MASTER_CSV_PATH)
+    selected_company = show_company_search(company_data)
 
-    company_list = load_company_data(company_csv_path)
-    selected_company = show_company_search(company_list)
+    if selected_company is not None:
+        if st.button("재무데이터 가져오기"):
+            fetch_and_extract_financial_data(selected_company)
 
     st.divider()
     financial_statement_data = load_financial_statement_data(FINANCIAL_STATEMENT_CSV_PATH)
