@@ -27,7 +27,7 @@ FINANCIAL_STATEMENT_CSV_PATH = BASE_DIR / "data" / "processed" / "financial_stat
 FIXED_REPORT_CODE = "11011"
 YEAR_COUNT = 5
 LTM_REPORT_CODE = "LTM"
-LTM_ACCOUNTS = ["매출액", "매출원가", "매출총이익", "영업이익", "당기순이익"]
+LTM_ACCOUNTS = ["매출액", "매출원가", "매출총이익", "판매비와 관리비", "영업이익", "당기순이익"]
 INTERIM_REPORT_PRIORITY = ["11014", "11012", "11013"]
 REPORT_LABELS = {
     "11011": "사업보고서",
@@ -58,7 +58,48 @@ ACCOUNT_COLOR_PALETTE = [
     "#ca8a04",
     "#0f766e",
     "#7c3aed",
+    "#0284c7",
+    "#b91c1c",
+    "#15803d",
+    "#6d28d9",
+    "#c2410c",
+    "#0e7490",
+    "#9f1239",
+    "#4338ca",
 ]
+ACCOUNT_CATEGORIES = {
+    "재무상태표": [
+        "자산총계",
+        "유동자산",
+        "비유동자산",
+        "현금및현금성자산",
+        "재고자산",
+        "유형자산",
+        "부채총계",
+        "유동부채",
+        "비유동부채",
+        "자본총계",
+        "이익잉여금",
+    ],
+    "손익계산서": [
+        "매출액",
+        "매출원가",
+        "매출총이익",
+        "판매비와 관리비",
+        "영업이익",
+        "당기순이익",
+    ],
+    "현금흐름표": [
+        "영업활동현금흐름",
+        "투자활동현금흐름",
+        "재무활동현금흐름",
+    ],
+}
+ACCOUNT_DISPLAY_ORDER = []
+
+for category_accounts in ACCOUNT_CATEGORIES.values():
+    ACCOUNT_DISPLAY_ORDER.extend(category_accounts)
+
 COMPANY_COLUMNS = [
     "corp_code",
     "corp_name",
@@ -218,8 +259,17 @@ def prepare_chart_data(account_data):
 def get_account_colors(account_names):
     """Assign stable colors to account names."""
     account_colors = {}
+    ordered_account_names = []
 
-    for index, account_name in enumerate(account_names):
+    for account_name in ACCOUNT_DISPLAY_ORDER:
+        if account_name in account_names:
+            ordered_account_names.append(account_name)
+
+    for account_name in account_names:
+        if account_name not in ordered_account_names:
+            ordered_account_names.append(account_name)
+
+    for index, account_name in enumerate(ordered_account_names):
         color_index = index % len(ACCOUNT_COLOR_PALETTE)
         account_colors[account_name] = ACCOUNT_COLOR_PALETTE[color_index]
 
@@ -227,17 +277,34 @@ def get_account_colors(account_names):
 
 
 def show_account_checkboxes(account_names, corp_code, fs_div):
-    """Show available account names as two-column checkboxes."""
+    """Show available account names grouped by financial statement category."""
     selected_accounts = []
-    left_col, right_col = st.columns(2)
+    available_accounts = set(account_names)
+    checkbox_columns = st.columns(3)
+    first_available_account = None
 
-    for index, account_name in enumerate(account_names):
-        checkbox_col = left_col if index % 2 == 0 else right_col
-        checkbox_key = f"account_{corp_code}_{FIXED_REPORT_CODE}_{fs_div}_{account_name}"
-        is_checked = checkbox_col.checkbox(account_name, value=index == 0, key=checkbox_key)
+    for account_name in ACCOUNT_DISPLAY_ORDER:
+        if account_name in available_accounts:
+            first_available_account = account_name
+            break
 
-        if is_checked:
-            selected_accounts.append(account_name)
+    for column_index, category_name in enumerate(ACCOUNT_CATEGORIES):
+        checkbox_column = checkbox_columns[column_index]
+        checkbox_column.markdown(f"**{category_name}**")
+
+        for account_name in ACCOUNT_CATEGORIES[category_name]:
+            if account_name not in available_accounts:
+                continue
+
+            checkbox_key = f"account_{corp_code}_{FIXED_REPORT_CODE}_{fs_div}_{account_name}"
+            is_checked = checkbox_column.checkbox(
+                account_name,
+                value=account_name == first_available_account,
+                key=checkbox_key,
+            )
+
+            if is_checked:
+                selected_accounts.append(account_name)
 
     return selected_accounts
 
@@ -251,7 +318,65 @@ def build_tooltip():
     ]
 
 
-def build_line_chart(chart_data, selected_accounts, selected_colors):
+def calculate_linear_trend_amount(years, amounts, year):
+    """Calculate one linear trend amount using a simple least-squares fit."""
+    observation_count = len(years)
+    average_year = sum(years) / observation_count
+    average_amount = sum(amounts) / observation_count
+    numerator = 0
+    denominator = 0
+
+    for index, observed_year in enumerate(years):
+        year_difference = observed_year - average_year
+        amount_difference = amounts[index] - average_amount
+        numerator += year_difference * amount_difference
+        denominator += year_difference * year_difference
+
+    if denominator == 0:
+        return None
+
+    slope = numerator / denominator
+    intercept = average_amount - slope * average_year
+    return slope * year + intercept
+
+
+def build_trendline_data(account_data, selected_accounts):
+    """Build trendline rows from annual business-report observations only."""
+    trendline_rows = []
+
+    for account_name in selected_accounts:
+        account_rows = account_data[account_data["account_nm"] == account_name].copy()
+        account_rows = account_rows[account_rows["report_code"] == FIXED_REPORT_CODE]
+        account_rows["numeric_year"] = pd.to_numeric(account_rows["year"], errors="coerce")
+        account_rows["numeric_amount"] = pd.to_numeric(account_rows["amount"], errors="coerce")
+        account_rows = account_rows.dropna(subset=["numeric_year", "numeric_amount"])
+        account_rows = account_rows.sort_values("numeric_year")
+
+        if len(account_rows) < 2:
+            continue
+
+        years = account_rows["numeric_year"].astype(float).tolist()
+        amounts = account_rows["numeric_amount"].astype(float).tolist()
+
+        for year in years:
+            trend_amount = calculate_linear_trend_amount(years, amounts, year)
+
+            if trend_amount is None:
+                continue
+
+            trendline_rows.append(
+                {
+                    "period_label": str(int(year)),
+                    "period_order": int(year),
+                    "account_nm": account_name,
+                    "trend_amount": trend_amount,
+                }
+            )
+
+    return pd.DataFrame(trendline_rows)
+
+
+def build_line_chart(chart_data, selected_accounts, selected_colors, show_trendline=False, trendline_data=None):
     """Build a multi-account line chart."""
     hover = alt.selection_point(
         nearest=True,
@@ -273,7 +398,21 @@ def build_line_chart(chart_data, selected_accounts, selected_colors):
         size=alt.condition(hover, alt.value(240), alt.value(60)),
     ).add_params(hover)
 
-    return (lines + points).properties(height=420)
+    chart = lines + points
+
+    if show_trendline and trendline_data is not None and not trendline_data.empty:
+        trendlines = alt.Chart(trendline_data).mark_line(
+            strokeWidth=2,
+            strokeDash=[6, 4],
+        ).encode(
+            x=alt.X("period_label:N", title="기간", sort=period_sort),
+            y=alt.Y("trend_amount:Q", title="금액"),
+            color=alt.Color("account_nm:N", scale=color_scale, legend=None),
+            detail=alt.Detail("account_nm:N"),
+        )
+        chart = chart + trendlines
+
+    return chart.properties(height=420)
 
 
 def build_bar_chart(chart_data, selected_accounts, selected_colors):
@@ -624,7 +763,18 @@ def show_financial_statement_chart(financial_statement_data, selected_company):
     company_data = append_ltm_rows(company_data, ltm_data)
 
     chart_type = st.selectbox("그래프 종류", ["Line chart", "Bar chart"])
-    account_names = sorted(company_data["account_nm"].dropna().unique())
+    show_trendline = False
+
+    if chart_type == "Line chart":
+        show_trendline = st.checkbox("추세선 표시", value=False)
+
+    available_account_names = set(company_data["account_nm"].dropna().unique())
+    account_names = [account_name for account_name in ACCOUNT_DISPLAY_ORDER if account_name in available_account_names]
+
+    if not account_names:
+        st.info("표시할 수 있는 표준 계정 데이터가 없습니다.")
+        return
+
     account_colors = get_account_colors(account_names)
     table_placeholder = st.empty()
 
@@ -647,7 +797,14 @@ def show_financial_statement_chart(financial_statement_data, selected_company):
     selected_colors = [account_colors[account_name] for account_name in selected_accounts]
 
     if chart_type == "Line chart":
-        chart = build_line_chart(chart_data, selected_accounts, selected_colors)
+        trendline_data = build_trendline_data(account_data, selected_accounts)
+        chart = build_line_chart(
+            chart_data,
+            selected_accounts,
+            selected_colors,
+            show_trendline=show_trendline,
+            trendline_data=trendline_data,
+        )
     else:
         chart = build_bar_chart(chart_data, selected_accounts, selected_colors)
 

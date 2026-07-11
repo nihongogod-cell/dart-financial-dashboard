@@ -12,14 +12,54 @@ ACCOUNT_MAPPING = {
         "account_names": ["자산총계"],
         "sj_names": ["재무상태표"],
     },
+    "유동자산": {
+        "account_ids": ["ifrs-full_CurrentAssets"],
+        "account_names": ["유동자산"],
+        "sj_names": ["재무상태표"],
+    },
+    "비유동자산": {
+        "account_ids": ["ifrs-full_NoncurrentAssets"],
+        "account_names": ["비유동자산"],
+        "sj_names": ["재무상태표"],
+    },
+    "현금및현금성자산": {
+        "account_ids": ["ifrs-full_CashAndCashEquivalents"],
+        "account_names": ["현금및현금성자산", "현금 및 현금성자산"],
+        "sj_names": ["재무상태표"],
+    },
+    "재고자산": {
+        "account_ids": ["ifrs-full_Inventories"],
+        "account_names": ["재고자산", "재고자산합계"],
+        "sj_names": ["재무상태표"],
+    },
+    "유형자산": {
+        "account_ids": ["ifrs-full_PropertyPlantAndEquipment"],
+        "account_names": ["유형자산"],
+        "sj_names": ["재무상태표"],
+    },
     "부채총계": {
         "account_ids": ["ifrs-full_Liabilities"],
         "account_names": ["부채총계"],
         "sj_names": ["재무상태표"],
     },
+    "유동부채": {
+        "account_ids": ["ifrs-full_CurrentLiabilities"],
+        "account_names": ["유동부채"],
+        "sj_names": ["재무상태표"],
+    },
+    "비유동부채": {
+        "account_ids": ["ifrs-full_NoncurrentLiabilities"],
+        "account_names": ["비유동부채"],
+        "sj_names": ["재무상태표"],
+    },
     "자본총계": {
         "account_ids": ["ifrs-full_Equity"],
         "account_names": ["자본총계"],
+        "sj_names": ["재무상태표"],
+    },
+    "이익잉여금": {
+        "account_ids": ["ifrs-full_RetainedEarnings"],
+        "account_names": ["이익잉여금", "이익잉여금(결손금)"],
         "sj_names": ["재무상태표"],
     },
     "매출액": {
@@ -35,6 +75,11 @@ ACCOUNT_MAPPING = {
     "매출총이익": {
         "account_ids": ["ifrs-full_GrossProfit"],
         "account_names": ["매출총이익"],
+        "sj_names": ["손익계산서", "포괄손익계산서"],
+    },
+    "판매비와 관리비": {
+        "account_ids": ["dart_TotalSellingGeneralAdministrativeExpenses"],
+        "account_names": ["판매비와관리비", "판매비와 관리비", "판매관리비", "판매비및관리비", "판매비 및 관리비", "판관비"],
         "sj_names": ["손익계산서", "포괄손익계산서"],
     },
     "영업이익": {
