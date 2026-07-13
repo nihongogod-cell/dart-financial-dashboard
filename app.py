@@ -21,6 +21,9 @@ from src.fetch_financial_statement import (
 )
 
 
+st.set_page_config(page_title="상장사 재무분석 대시보드", layout="wide")
+
+
 BASE_DIR = Path(__file__).resolve().parent
 COMPANY_MASTER_CSV_PATH = BASE_DIR / "data" / "processed" / "company_master.csv"
 FINANCIAL_STATEMENT_CSV_PATH = BASE_DIR / "data" / "processed" / "financial_statement.csv"
@@ -121,6 +124,316 @@ FINANCIAL_STATEMENT_COLUMNS = [
     "account_nm",
     "amount",
 ]
+PAGE_WIDTH_CSS = """
+<style>
+    :root {
+        --page-bg: #FFE9D6;
+        --main-text: #3A2E27;
+        --secondary-text: #7A6558;
+        --surface: #FFF7F0;
+        --surface-alt: #FBE2CF;
+        --table-header: #F3D2BC;
+        --border: #D9B79C;
+        --divider: #D9B79C;
+        --accent: #E98A5A;
+        --active-accent: #F46D5B;
+        --hover-accent: #D96E3D;
+        --gridline: #E7C9B4;
+        --placeholder: #9A7F6C;
+        --radio-border: #B98F73;
+    }
+
+    html,
+    body,
+    .stApp,
+    [data-testid="stAppViewContainer"],
+    [data-testid="stHeader"] {
+        background: var(--page-bg);
+        color: var(--main-text);
+    }
+
+    .block-container {
+        max-width: 95vw;
+        padding-left: 1.5rem;
+        padding-right: 1.5rem;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    p,
+    label,
+    span,
+    div {
+        color: var(--main-text);
+    }
+
+    .dashboard-title {
+        margin: 0;
+        color: var(--main-text);
+        font-size: 2.4rem;
+        font-weight: 800;
+        letter-spacing: 0;
+    }
+
+    .dashboard-subtitle {
+        margin-top: 0.35rem;
+        margin-bottom: 1.75rem;
+        color: var(--secondary-text);
+        font-size: 1.08rem;
+        font-weight: 500;
+    }
+
+    .dashboard-footer {
+        margin-top: 4rem;
+        padding-bottom: 1.5rem;
+        text-align: center;
+        color: var(--secondary-text);
+        font-size: 0.82rem;
+    }
+
+    .company-info-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(120, 80, 50, 0.08);
+        padding: 0.35rem 1.25rem;
+        margin-bottom: 1rem;
+    }
+
+    .company-info-row {
+        display: grid;
+        grid-template-columns: minmax(5.5rem, 8rem) minmax(0, 1fr);
+        gap: 1rem;
+        align-items: start;
+        padding: 0.7rem 0;
+    }
+
+    .company-info-row:not(:last-child) {
+        border-bottom: 1px solid var(--gridline);
+    }
+
+    .company-info-label {
+        color: var(--secondary-text);
+        font-weight: 700;
+    }
+
+    .company-info-value,
+    .company-info-value a {
+        color: var(--main-text);
+        overflow-wrap: anywhere;
+    }
+
+    .company-info-value a {
+        text-decoration-color: var(--accent);
+    }
+
+    .financial-table-wrap {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        overflow: hidden;
+        margin-bottom: 1rem;
+    }
+
+    .financial-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--surface);
+        color: var(--main-text);
+        font-size: 0.92rem;
+    }
+
+    .financial-table thead th {
+        background: var(--table-header);
+        color: #4A3428;
+        border-bottom: 1px solid var(--border);
+        padding: 0.6rem 0.75rem;
+        text-align: left;
+        font-weight: 800;
+    }
+
+    .financial-table tbody td {
+        background: var(--surface);
+        color: var(--main-text);
+        border-bottom: 1px solid var(--border);
+        padding: 0.58rem 0.75rem;
+    }
+
+    .financial-table tbody tr:hover td {
+        background: #FCE6D7;
+    }
+
+    .financial-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    .financial-table .amount-cell {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+    }
+
+    [data-testid="stVerticalBlockBorderWrapper"],
+    [data-testid="stDataFrame"],
+    [data-testid="stTable"],
+    div[data-baseweb="select"] > div,
+    div[data-baseweb="input"] > div,
+    textarea,
+    input {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 0.65rem;
+        color: var(--main-text);
+    }
+
+    input::placeholder,
+    textarea::placeholder {
+        color: var(--placeholder);
+        opacity: 1;
+    }
+
+    div[data-baseweb="input"]:focus-within > div,
+    div[data-baseweb="select"]:focus-within > div,
+    textarea:focus,
+    input:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 1px var(--accent);
+    }
+
+    div[data-baseweb="popover"],
+    ul[role="listbox"],
+    div[role="listbox"] {
+        background: var(--surface-alt);
+        color: var(--main-text);
+        border-color: var(--border);
+    }
+
+    [role="option"]:hover,
+    [data-baseweb="menu"] li:hover {
+        background: #FCE6D7;
+    }
+
+    [aria-selected="true"] {
+        background: var(--surface-alt);
+        color: var(--main-text);
+    }
+
+    [data-testid="stRadio"] label,
+    [data-testid="stCheckbox"] label {
+        color: var(--main-text);
+    }
+
+    [data-testid="stRadio"] [role="radiogroup"] label span:first-child,
+    [data-testid="stCheckbox"] label span:first-child {
+        background: var(--surface);
+        border-color: var(--radio-border);
+    }
+
+    [data-testid="stCheckbox"] div[data-baseweb="checkbox"] > div:first-child,
+    [data-testid="stRadio"] div[role="radio"] {
+        background: var(--surface);
+        border-color: var(--radio-border);
+    }
+
+    [data-testid="stCheckbox"] input:checked + div,
+    [data-testid="stRadio"] input:checked + div,
+    [data-testid="stCheckbox"] div[data-baseweb="checkbox"][aria-checked="true"] > div:first-child,
+    [data-testid="stRadio"] div[aria-checked="true"] {
+        background-color: var(--active-accent);
+        border-color: var(--active-accent);
+    }
+
+    [data-testid="stCheckbox"] label:hover span:first-child,
+    [data-testid="stRadio"] label:hover span:first-child {
+        border-color: var(--accent);
+    }
+
+    [data-testid="stVerticalBlockBorderWrapper"] {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(120, 80, 50, 0.08);
+        padding: 1.25rem;
+    }
+
+    .stButton > button {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #FFFDFC;
+    }
+
+    .stButton > button:hover,
+    .stButton > button:focus {
+        background: var(--hover-accent);
+        border-color: var(--hover-accent);
+        color: #FFFDFC;
+    }
+
+    [data-testid="stAlert"] {
+        border-color: var(--border);
+        color: var(--main-text);
+    }
+
+    [data-testid="stAlert"] > div {
+        color: var(--main-text);
+    }
+
+    [data-testid="stDataFrame"] {
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    [data-testid="stDataFrame"] * {
+        color: var(--main-text);
+    }
+
+    [data-testid="stDataFrame"] [role="columnheader"] {
+        background: var(--table-header);
+        color: #4A3428;
+        border-color: var(--border);
+    }
+
+    [data-testid="stDataFrame"] [role="gridcell"] {
+        background: var(--surface);
+        border-color: var(--border);
+    }
+
+    [data-testid="stDataFrame"] [role="row"]:hover [role="gridcell"] {
+        background: #FCE6D7;
+    }
+
+    [data-testid="stVegaLiteChart"] {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        box-sizing: border-box;
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        overflow: hidden;
+        padding: 0.75rem;
+    }
+
+    [data-testid="stVegaLiteChart"] > div {
+        background: var(--surface);
+        max-width: 100%;
+        min-width: 0;
+    }
+
+    hr {
+        border-color: var(--divider);
+    }
+</style>
+"""
+CHART_HEIGHT = 620
+CHART_SURFACE_COLOR = "#FFF7F0"
+CHART_TEXT_COLOR = "#3A2E27"
+CHART_GRID_COLOR = "#E7C9B4"
+CHART_AXIS_COLOR = "#D9B79C"
 
 
 def load_company_master_data(csv_path):
@@ -184,20 +497,46 @@ def format_company_option(company):
     return f"{corp_name} | {market_label} | {stock_code}"
 
 
+def build_company_info_row(label, value, is_link=False):
+    """Build one themed company-information row."""
+    safe_label = escape(label)
+    safe_value = escape(value)
+
+    if is_link and value != "정보 없음":
+        href = value
+
+        if not href.startswith(("http://", "https://")):
+            href = f"https://{href}"
+
+        safe_href = escape(href)
+        value_html = f'<a href="{safe_href}" target="_blank" rel="noopener noreferrer">{safe_value}</a>'
+    else:
+        value_html = safe_value
+
+    return (
+        '<div class="company-info-row">'
+        f'<div class="company-info-label">{safe_label}</div>'
+        f'<div class="company-info-value">{value_html}</div>'
+        "</div>"
+    )
+
+
 def show_company_card(company):
     """Display selected company information."""
     st.subheader("선택한 회사 정보")
-
-    with st.container(border=True):
-        st.write(f"회사명: {get_display_value(company, 'corp_name')}")
-        st.write(f"종목코드: {get_display_value(company, 'stock_code')}")
-        st.write(f"시장구분: {get_market_label(company)}")
-        st.write(f"대표이사: {get_display_value(company, 'ceo_nm')}")
-        st.write(f"업종코드: {get_display_value(company, 'induty_code')}")
-        st.write(f"주소: {get_display_value(company, 'adres')}")
-        st.write(f"홈페이지: {get_display_value(company, 'hm_url')}")
-        st.write(f"설립일: {get_display_value(company, 'est_dt')}")
-        st.write(f"결산월: {get_display_value(company, 'acc_mt')}")
+    company_rows = [
+        build_company_info_row("회사명", get_display_value(company, "corp_name")),
+        build_company_info_row("종목코드", get_display_value(company, "stock_code")),
+        build_company_info_row("시장구분", get_market_label(company)),
+        build_company_info_row("대표이사", get_display_value(company, "ceo_nm")),
+        build_company_info_row("업종코드", get_display_value(company, "induty_code")),
+        build_company_info_row("주소", get_display_value(company, "adres")),
+        build_company_info_row("홈페이지", get_display_value(company, "hm_url"), is_link=True),
+        build_company_info_row("설립일", get_display_value(company, "est_dt")),
+        build_company_info_row("결산월", get_display_value(company, "acc_mt")),
+    ]
+    card_html = '<div class="company-info-card">' + "".join(company_rows) + "</div>"
+    st.markdown(card_html, unsafe_allow_html=True)
 
 
 def show_company_search(company_list):
@@ -280,7 +619,6 @@ def show_account_checkboxes(account_names, corp_code, fs_div):
     """Show available account names grouped by financial statement category."""
     selected_accounts = []
     available_accounts = set(account_names)
-    checkbox_columns = st.columns(3)
     first_available_account = None
 
     for account_name in ACCOUNT_DISPLAY_ORDER:
@@ -288,13 +626,17 @@ def show_account_checkboxes(account_names, corp_code, fs_div):
             first_available_account = account_name
             break
 
-    for column_index, category_name in enumerate(ACCOUNT_CATEGORIES):
-        checkbox_column = checkbox_columns[column_index]
-        checkbox_column.markdown(f"**{category_name}**")
+    for category_name, category_accounts in ACCOUNT_CATEGORIES.items():
+        st.markdown(f"**{category_name}**")
+        checkbox_columns = st.columns(2)
+        available_category_accounts = []
 
-        for account_name in ACCOUNT_CATEGORIES[category_name]:
-            if account_name not in available_accounts:
-                continue
+        for account_name in category_accounts:
+            if account_name in available_accounts:
+                available_category_accounts.append(account_name)
+
+        for index, account_name in enumerate(available_category_accounts):
+            checkbox_column = checkbox_columns[index % 2]
 
             checkbox_key = f"account_{corp_code}_{FIXED_REPORT_CODE}_{fs_div}_{account_name}"
             is_checked = checkbox_column.checkbox(
@@ -376,6 +718,22 @@ def build_trendline_data(account_data, selected_accounts):
     return pd.DataFrame(trendline_rows)
 
 
+def apply_chart_theme(chart):
+    """Apply the dashboard light theme to an Altair chart."""
+    return chart.properties(
+        height=CHART_HEIGHT,
+        background=CHART_SURFACE_COLOR,
+    ).configure_view(
+        fill=CHART_SURFACE_COLOR,
+        stroke=CHART_GRID_COLOR,
+    ).configure_axis(
+        labelColor=CHART_TEXT_COLOR,
+        tickColor=CHART_AXIS_COLOR,
+        domainColor=CHART_AXIS_COLOR,
+        gridColor=CHART_GRID_COLOR,
+    )
+
+
 def build_line_chart(chart_data, selected_accounts, selected_colors, show_trendline=False, trendline_data=None):
     """Build a multi-account line chart."""
     hover = alt.selection_point(
@@ -387,8 +745,8 @@ def build_line_chart(chart_data, selected_accounts, selected_colors, show_trendl
     color_scale = alt.Scale(domain=selected_accounts, range=selected_colors)
     period_sort = alt.SortField(field="period_order", order="ascending")
     base = alt.Chart(chart_data).encode(
-        x=alt.X("period_label:N", title="기간", sort=period_sort),
-        y=alt.Y("amount:Q", title="금액"),
+        x=alt.X("period_label:N", title=None, sort=period_sort),
+        y=alt.Y("amount:Q", title=None),
         color=alt.Color("account_nm:N", scale=color_scale, legend=None),
         detail=alt.Detail("account_nm:N"),
         tooltip=build_tooltip(),
@@ -405,14 +763,14 @@ def build_line_chart(chart_data, selected_accounts, selected_colors, show_trendl
             strokeWidth=2,
             strokeDash=[6, 4],
         ).encode(
-            x=alt.X("period_label:N", title="기간", sort=period_sort),
-            y=alt.Y("trend_amount:Q", title="금액"),
+            x=alt.X("period_label:N", title=None, sort=period_sort),
+            y=alt.Y("trend_amount:Q", title=None),
             color=alt.Color("account_nm:N", scale=color_scale, legend=None),
             detail=alt.Detail("account_nm:N"),
         )
         chart = chart + trendlines
 
-    return chart.properties(height=420)
+    return apply_chart_theme(chart)
 
 
 def build_bar_chart(chart_data, selected_accounts, selected_colors):
@@ -420,13 +778,15 @@ def build_bar_chart(chart_data, selected_accounts, selected_colors):
     color_scale = alt.Scale(domain=selected_accounts, range=selected_colors)
     period_sort = alt.SortField(field="period_order", order="ascending")
 
-    return alt.Chart(chart_data).mark_bar().encode(
-        x=alt.X("period_label:N", title="기간", sort=period_sort),
+    chart = alt.Chart(chart_data).mark_bar().encode(
+        x=alt.X("period_label:N", title=None, sort=period_sort),
         xOffset=alt.XOffset("account_nm:N"),
-        y=alt.Y("amount:Q", title="금액"),
+        y=alt.Y("amount:Q", title=None),
         color=alt.Color("account_nm:N", scale=color_scale, legend=None),
         tooltip=build_tooltip(),
-    ).properties(height=420)
+    )
+
+    return apply_chart_theme(chart)
 
 
 def show_custom_legend(selected_accounts, account_colors):
@@ -438,9 +798,9 @@ def show_custom_legend(selected_accounts, account_colors):
         safe_color = escape(account_colors[account_name])
         legend_html += (
             '<div style="display:flex; align-items:center; justify-content:space-between; '
-            'gap:8px; margin-bottom:8px; font-size:0.9rem;">'
-            f"<span>{safe_account_name}</span>"
-            f'<span style="display:inline-block; width:28px; border-top:4px solid {safe_color};"></span>'
+            'gap:10px; margin-bottom:8px; font-size:0.9rem; max-width:100%; min-width:0;">'
+            f'<span style="min-width:0; overflow-wrap:anywhere;">{safe_account_name}</span>'
+            f'<span style="display:inline-block; flex:0 0 32px; border-top:4px solid {safe_color};"></span>'
             "</div>"
         )
 
@@ -683,6 +1043,59 @@ def sort_display_data(account_data):
     return display_data.drop(columns=["_period_order"])
 
 
+def format_table_amount(amount):
+    """Format one amount for display without changing the source data."""
+    if pd.isna(amount):
+        return ""
+
+    try:
+        return f"{int(amount):,}"
+    except (TypeError, ValueError):
+        return str(amount)
+
+
+def build_financial_table_display_data(account_data):
+    """Build a localized display-only financial data table."""
+    table_data = account_data[["year", "account_nm", "amount"]].copy()
+    table_data = table_data.rename(
+        columns={
+            "year": "연도",
+            "account_nm": "계정명",
+            "amount": "금액",
+        }
+    )
+    table_data["금액"] = table_data["금액"].map(format_table_amount)
+    return table_data
+
+
+def render_financial_table(table_data):
+    """Render a warm-themed display-only financial table."""
+    header_cells = "".join(f"<th>{escape(column)}</th>" for column in table_data.columns)
+    body_rows = []
+
+    for row in table_data.to_dict("records"):
+        year_value = escape(str(row.get("연도", "")))
+        account_value = escape(str(row.get("계정명", "")))
+        amount_value = escape(str(row.get("금액", "")))
+        body_rows.append(
+            "<tr>"
+            f"<td>{year_value}</td>"
+            f"<td>{account_value}</td>"
+            f'<td class="amount-cell">{amount_value}</td>'
+            "</tr>"
+        )
+
+    table_html = (
+        '<div class="financial-table-wrap">'
+        '<table class="financial-table">'
+        f"<thead><tr>{header_cells}</tr></thead>"
+        f"<tbody>{''.join(body_rows)}</tbody>"
+        "</table>"
+        "</div>"
+    )
+    st.markdown(table_html, unsafe_allow_html=True)
+
+
 def get_latest_completed_years(year_count):
     """Return the latest completed business years."""
     latest_completed_year = datetime.now().year - 1
@@ -699,12 +1112,12 @@ def fetch_and_extract_financial_data(selected_company):
     corp_name = selected_company["corp_name"]
     years = get_latest_completed_years(YEAR_COUNT)
 
-    st.info("최근 5개 사업연도 연결/별도 재무데이터를 가져오는 중입니다...")
+    status_message = st.empty()
+    status_message.info("데이터를 가져오는 중입니다.")
     all_fetch_results = []
     total_extracted_rows = 0
 
-    for fs_div_label, fs_div in FS_DIV_MAP.items():
-        st.info(f"{fs_div_label} 데이터를 가져오는 중입니다...")
+    for fs_div in FS_DIV_MAP.values():
         fetch_results = fetch_multiple_years(
             company_name=corp_name,
             years=years,
@@ -724,18 +1137,18 @@ def fetch_and_extract_financial_data(selected_company):
             )
             total_extracted_rows += len(extracted_rows)
 
-        st.info(f"{fs_div_label} LTM 데이터를 계산하는 중입니다...")
         store_ltm_rows(selected_company, fs_div)
 
     if not all_fetch_results:
-        st.error("재무데이터를 가져오지 못했습니다.")
+        status_message.error("재무데이터를 가져오지 못했습니다.")
         return False
 
     if total_extracted_rows == 0:
-        st.error("재무데이터에서 표시할 계정을 추출하지 못했습니다.")
+        status_message.error("재무데이터에서 표시할 계정을 추출하지 못했습니다.")
         return False
 
-    st.success(f"재무데이터를 가져와서 저장했습니다. 성공한 재무제표: {len(all_fetch_results)}건")
+    successful_report_count = len(all_fetch_results)
+    status_message.success(f"데이터를 불러오는데 성공했습니다. 성공한 재무제표: {successful_report_count}건")
     return True
 
 
@@ -762,12 +1175,6 @@ def show_financial_statement_chart(financial_statement_data, selected_company):
 
     company_data = append_ltm_rows(company_data, ltm_data)
 
-    chart_type = st.selectbox("그래프 종류", ["Line chart", "Bar chart"])
-    show_trendline = False
-
-    if chart_type == "Line chart":
-        show_trendline = st.checkbox("추세선 표시", value=False)
-
     available_account_names = set(company_data["account_nm"].dropna().unique())
     account_names = [account_name for account_name in ACCOUNT_DISPLAY_ORDER if account_name in available_account_names]
 
@@ -777,9 +1184,11 @@ def show_financial_statement_chart(financial_statement_data, selected_company):
 
     account_colors = get_account_colors(account_names)
     table_placeholder = st.empty()
+    selector_column, chart_column = st.columns([1.1, 3.4], gap="large")
 
-    st.markdown("#### 계정 선택")
-    selected_accounts = show_account_checkboxes(account_names, corp_code, selected_fs_div)
+    with selector_column:
+        st.markdown("#### 계정 선택")
+        selected_accounts = show_account_checkboxes(account_names, corp_code, selected_fs_div)
 
     if not selected_accounts:
         table_placeholder.info("그래프에 표시할 계정을 하나 이상 선택해 주세요.")
@@ -788,37 +1197,53 @@ def show_financial_statement_chart(financial_statement_data, selected_company):
     account_data = company_data[company_data["account_nm"].isin(selected_accounts)]
     account_data = sort_display_data(account_data)
 
-    table_placeholder.dataframe(account_data[FINANCIAL_STATEMENT_COLUMNS], use_container_width=True)
+    table_data = build_financial_table_display_data(account_data)
+    with table_placeholder.container():
+        render_financial_table(table_data)
 
-    if ltm_data.get("message"):
-        st.caption(ltm_data["message"])
+    with chart_column:
+        chart_type = st.selectbox("그래프 종류", ["Line chart", "Bar chart"])
+        show_trendline = False
 
-    chart_data = prepare_chart_data(account_data)
-    selected_colors = [account_colors[account_name] for account_name in selected_accounts]
+        if chart_type == "Line chart":
+            show_trendline = st.checkbox("추세선 표시", value=False)
 
-    if chart_type == "Line chart":
-        trendline_data = build_trendline_data(account_data, selected_accounts)
-        chart = build_line_chart(
-            chart_data,
-            selected_accounts,
-            selected_colors,
-            show_trendline=show_trendline,
-            trendline_data=trendline_data,
-        )
-    else:
-        chart = build_bar_chart(chart_data, selected_accounts, selected_colors)
+        if ltm_data.get("message"):
+            st.caption(ltm_data["message"])
 
-    chart_col, legend_col = st.columns([5, 1])
+        chart_data = prepare_chart_data(account_data)
+        selected_colors = [account_colors[account_name] for account_name in selected_accounts]
 
-    with chart_col:
-        st.altair_chart(chart, use_container_width=True)
+        if chart_type == "Line chart":
+            trendline_data = build_trendline_data(account_data, selected_accounts)
+            chart = build_line_chart(
+                chart_data,
+                selected_accounts,
+                selected_colors,
+                show_trendline=show_trendline,
+                trendline_data=trendline_data,
+            )
+        else:
+            chart = build_bar_chart(chart_data, selected_accounts, selected_colors)
 
-    with legend_col:
-        show_custom_legend(selected_accounts, account_colors)
+        chart_col, legend_col = st.columns([4.7, 1.3])
+
+        with chart_col:
+            st.altair_chart(chart, use_container_width=True)
+
+        with legend_col:
+            show_custom_legend(selected_accounts, account_colors)
 
 
 def main():
-    st.title("DART 재무데이터 대시보드")
+    st.markdown(PAGE_WIDTH_CSS, unsafe_allow_html=True)
+    st.markdown(
+        """
+        <h1 class="dashboard-title">상장사 재무분석 대시보드</h1>
+        <p class="dashboard-subtitle">상장사의 5개년 재무 흐름과 LTM을 한눈에 분석하세요.</p>
+        """,
+        unsafe_allow_html=True,
+    )
 
     if not COMPANY_MASTER_CSV_PATH.exists():
         st.error(
@@ -837,6 +1262,10 @@ def main():
     st.divider()
     financial_statement_data = load_financial_statement_data(FINANCIAL_STATEMENT_CSV_PATH)
     show_financial_statement_chart(financial_statement_data, selected_company)
+    st.markdown(
+        '<div class="dashboard-footer">© 2026 Yoon Seowon. All rights reserved.</div>',
+        unsafe_allow_html=True,
+    )
 
 
 if __name__ == "__main__":
