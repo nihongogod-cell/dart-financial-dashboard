@@ -1,5 +1,9 @@
 # DART Financial Dashboard
 
+[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://dart-financial-dashboard.streamlit.app/)
+
+**Live Demo:** https://dart-financial-dashboard.streamlit.app/
+
 An interactive Streamlit dashboard for analyzing five-year financial trends and LTM metrics of Korean listed companies using OpenDART financial data.
 
 The dashboard uses XBRL-based account normalization to provide consistent financial comparisons across companies and reporting periods, even when the same economic concept is presented under different account labels.
@@ -237,9 +241,15 @@ python3 src/build_company_master.py
 python3 src/enrich_market_classification.py
 ```
 
+## Live Demo
+
+The dashboard is publicly deployed on Streamlit Community Cloud:
+
+https://dart-financial-dashboard.streamlit.app/
+
 ## Deployment
 
-The application is designed for deployment on Streamlit Community Cloud.
+The application is deployed on Streamlit Community Cloud.
 
 Required configuration:
 
@@ -247,7 +257,6 @@ Required configuration:
 Main file path: app.py
 Dependencies: requirements.txt
 Secret / environment variable: DART_API_KEY
-```
 
 The repository contains the required deployment configuration.
 
