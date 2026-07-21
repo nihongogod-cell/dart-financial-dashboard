@@ -29,6 +29,7 @@ COMPANY_MASTER_CSV_PATH = BASE_DIR / "data" / "processed" / "company_master.csv"
 FINANCIAL_STATEMENT_CSV_PATH = BASE_DIR / "data" / "processed" / "financial_statement.csv"
 FIXED_REPORT_CODE = "11011"
 YEAR_COUNT = 5
+DART_TIMEOUT_SECONDS = 30
 LTM_REPORT_CODE = "LTM"
 LTM_ACCOUNTS = ["매출액", "매출원가", "매출총이익", "판매비와 관리비", "영업이익", "당기순이익"]
 INTERIM_REPORT_PRIORITY = ["11014", "11012", "11013"]
@@ -827,7 +828,7 @@ def fetch_dart_response(api_key, corp_code, bsns_year, report_code, fs_div):
     """Fetch one DART response in memory without saving raw JSON."""
     request_url = build_request_url(api_key, corp_code, bsns_year, report_code, fs_div)
 
-    with urlopen(request_url) as response:
+    with urlopen(request_url, timeout=DART_TIMEOUT_SECONDS) as response:
         response_text = response.read().decode("utf-8")
 
     return json.loads(response_text)

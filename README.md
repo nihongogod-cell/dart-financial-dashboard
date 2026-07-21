@@ -164,6 +164,8 @@ Interactive visualization
 │       ├── company_list.csv
 │       ├── company_master.csv
 │       └── financial_statement.csv
+├── scripts/
+│   └── diagnose_streamlit_cloud.py
 └── src/
     ├── fetch_company_list.py
     ├── build_company_master.py
@@ -257,8 +259,21 @@ Required configuration:
 Main file path: app.py
 Dependencies: requirements.txt
 Secret / environment variable: DART_API_KEY
+```
 
 The repository contains the required deployment configuration.
+
+### Streamlit Cloud 장애 진단
+
+If Streamlit Community Cloud shows an endless loading spinner while saved company data still appears, run the reusable diagnostic from the repository root:
+
+```bash
+python3 scripts/diagnose_streamlit_cloud.py
+```
+
+The script checks local configuration and the OpenDART collection path without modifying production financial data. It helps distinguish local application errors from Streamlit Cloud deployment-state problems.
+
+Streamlit Secrets must contain `DART_API_KEY`. Runtime-generated files on Streamlit Community Cloud should not be treated as durable storage, and deleting/redeploying the Streamlit app may reset a corrupted deployment state.
 
 ## Known Limitations
 

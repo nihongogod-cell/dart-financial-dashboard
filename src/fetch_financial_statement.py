@@ -13,6 +13,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 ENV_PATH = BASE_DIR / ".env"
 COMPANY_LIST_PATH = BASE_DIR / "data" / "processed" / "company_list.csv"
 FINANCIAL_STATEMENT_URL = "https://opendart.fss.or.kr/api/fnlttSinglAcntAll.json"
+DART_TIMEOUT_SECONDS = 30
 REPORT_CODE_NAMES = {
     "11011": "annual",
     "11012": "half-year",
@@ -66,7 +67,7 @@ def download_json(request_url, save_path):
     """Download raw JSON from DART and save it to a file."""
     save_path.parent.mkdir(parents=True, exist_ok=True)
 
-    with urlopen(request_url) as response:
+    with urlopen(request_url, timeout=DART_TIMEOUT_SECONDS) as response:
         json_data = response.read()
 
     save_path.write_bytes(json_data)
@@ -77,7 +78,7 @@ def has_financial_statement_data(raw_json_path):
     with raw_json_path.open("r", encoding="utf-8") as json_file:
         response_data = json.load(json_file)
 
-    return bool(response_data.get("list", []))
+    return response_data.get("status") == "000" and bool(response_data.get("list", []))
 
 
 def fetch_financial_statement(company_name, bsns_year, report_code, fs_div):
